@@ -1,0 +1,7 @@
+{
+  "botApiKey": "insert telegram key here",
+  "ownerUserId": "remove this entry or enter the owner id",
+  "redditUsername": "your reddit username",
+  "clientId": "your client id",
+  "clientSecret": "your client secret"
+}
