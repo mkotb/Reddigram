@@ -7,18 +7,18 @@ import net.dean.jraw.models.Submission;
 import net.dean.jraw.paginators.Sorting;
 import net.dean.jraw.paginators.SubredditPaginator;
 import pro.zackpollard.telegrambot.api.TelegramBot;
+import xyz.mkotb.reddigram.data.BotConfig;
+import xyz.mkotb.reddigram.data.DataFile;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Timer;
-import java.util.UUID;
+import java.util.*;
 
 public class ReddigramBot {
     private final Timer timer;
     private final BotConfig config;
     private final UUID deviceId = UUID.randomUUID();
     private final TelegramBot telegramBot;
+    private final DataFile dataFile;
     private RedditClient client;
 
     public static void main(String[] args) throws Exception {
@@ -28,6 +28,7 @@ public class ReddigramBot {
     ReddigramBot() throws Exception {
         timer = new Timer();
         config = BotConfig.configFromFile(new File("config.json"));
+        dataFile = DataFile.load(this);
         client = new RedditClient(UserAgent.of("server", "xyz.mkotb.reddigram", "1.0", config.redditUsername()));
         telegramBot = TelegramBot.login(config.botApiKey());
 
@@ -36,6 +37,14 @@ public class ReddigramBot {
         log("Successfully logged in");
 
         timer.scheduleAtFixedRate(new OAuthTask(this), 0L, 3500000L); // every 58 minutes reauth.
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                if (dataFile != null) {
+                    dataFile.save();
+                }
+            }
+        }, 0L, 600000L); // every 10m save data file
     }
 
     // gets an extract of 20 submissions from requested subreddit
@@ -73,6 +82,10 @@ public class ReddigramBot {
         if (config.ownerUserId() != null) {
             telegramBot.getChat(config.ownerUserId()).sendMessage("[" + telegramBot.getBotUsername() + "] " + text);
         }
+    }
+
+    public DataFile dataFile() {
+        return dataFile;
     }
 
     public RedditClient client() {

@@ -21,11 +21,13 @@ import pro.zackpollard.telegrambot.api.event.chat.inline.InlineQueryReceivedEven
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent;
 import pro.zackpollard.telegrambot.api.extensions.Extensions;
 import pro.zackpollard.telegrambot.api.menu.*;
+import xyz.mkotb.reddigram.data.UserData;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 // NOTES:
 //
@@ -44,7 +46,8 @@ public class TelegramListener implements Listener {
     @Override
     public void onCommandMessageReceived(CommandMessageReceivedEvent event) {
         if (event.getCommand().equals("frontpage")) {
-            sortingMenu(null, event.getChat(), "all");
+            sortingMenu(null, event.getChat(), false, (message, sorting) ->
+                    sendSubreddit(message, event.getChat(), "all", sorting));
         }
 
         if (event.getCommand().equals("goto") || event.getCommand().equals("subreddit")) {
@@ -61,7 +64,8 @@ public class TelegramListener implements Listener {
                         .first(new TextPrompt() {
                             @Override
                             public boolean process(ConversationContext context, TextContent input) {
-                                sortingMenu(message, event.getChat(), input.getContent());
+                                sortingMenu(message, event.getChat(), false, (message, sorting) ->
+                                        sendSubreddit(message, event.getChat(), event.getArgs()[0], sorting));
                                 return false;
                             }
 
@@ -75,7 +79,8 @@ public class TelegramListener implements Listener {
                 return;
             }
 
-            sortingMenu(null, event.getChat(), event.getArgs()[0]);
+            sortingMenu(null, event.getChat(), false, (message, sorting) ->
+                sendSubreddit(message, event.getChat(), event.getArgs()[0], sorting));
         }
     }
 
@@ -87,7 +92,15 @@ public class TelegramListener implements Listener {
             subreddit = "all";
         }
 
-        Sorting sorting = Sorting.HOT; // TODO: look for their preference and if none, default to HOT
+        Sorting sorting;
+        UserData data = bot.dataFile().dataFor(String.valueOf(event.getQuery().getSender().getId()));
+
+        if (data == null || data.preferredSorting() == null) {
+            sorting = Sorting.HOT;
+        } else {
+            sorting = data.preferredSorting();
+        }
+
         List<List<Submission>> pages = bot.pagesFor(subreddit, sorting);
         List<InlineQueryResult> results = new ArrayList<>(pages.size());
 
@@ -135,20 +148,33 @@ public class TelegramListener implements Listener {
                 .isPersonal(false) // although sorting is not personal sometimes, this will save processing time
                 .nextOffset("").build()
         );
+        bot.dataFile().statistics().incrementRequests();
     }
 
     /*
-         * Presents to the user a menu to select a category.
-         *
-         * TODO: Learn the preference and use that unless they want to change it.
-         */
-    public void sortingMenu(Message msg, Chat chat, String subreddit) {
+     * Presents to the user a menu to select a category.
+     */
+    public void sortingMenu(Message msg, Chat chat,
+                            boolean force, BiConsumer<Message, Sorting> consumer) {
         if (msg == null) {
             msg = chat.sendMessage("Please select a category:");
         } else {
             bot.telegramBot().editMessageText(msg, "Please select a category", ParseMode.NONE, false, null);
         }
 
+        UserData data = bot.dataFile().dataFor(chat.getId());
+
+        if (!force && data != null) {
+            if (data.preferredSorting() != null) {
+                consumer.accept(msg, data.preferredSorting());
+                return;
+            }
+        } else if (data == null) {
+            data = new UserData();
+            bot.dataFile().newData(chat.getId(), data);
+        }
+
+        UserData userData = data; // effectively final
         Message message = msg;
         InlineMenuBuilder menu = InlineMenu.builder(bot.telegramBot())
                 .forWhom(chat)
@@ -159,7 +185,10 @@ public class TelegramListener implements Listener {
                     .toggleButton(StringUtils.capitalize(sorting.name().toLowerCase()))
                        .toggleCallback((button, value) -> {
                            button.getMenu().unregister();
-                           sendSubreddit(message, chat, subreddit, sorting);
+                           userData.setPreferredSorting(sorting);
+
+                           consumer.accept(message, sorting);
+                           bot.dataFile().save();
                            return null;
                        })
                     .buildRow();
@@ -255,6 +284,7 @@ public class TelegramListener implements Listener {
                 true,
                 menus.get(0).toKeyboard()
         );
+        bot.dataFile().statistics().incrementRequests();
     }
 
     // generates message for the page of submissions

@@ -1,4 +1,4 @@
-package xyz.mkotb.reddigram;
+package xyz.mkotb.reddigram.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -12,6 +12,10 @@ import java.nio.file.Files;
 import java.util.Collections;
 
 public class BotConfig {
+    public static final transient Gson GSON = new GsonBuilder()
+            .excludeFieldsWithModifiers(Modifier.TRANSIENT)
+            .setPrettyPrinting()
+            .create();
     private String botApiKey = "insert telegram key here";
     private String ownerUserId = "remove this entry or enter the owner id";
     private String redditUsername = "your reddit username";
@@ -43,10 +47,6 @@ public class BotConfig {
 
     public static BotConfig configFromFile(File file) {
         BotConfig def = new BotConfig();
-        Gson gson = new GsonBuilder()
-                .excludeFieldsWithModifiers(Modifier.TRANSIENT)
-                .setPrettyPrinting()
-                .create();
 
         if (!file.exists()) {
             System.out.println("[Config] Can't find config file...");
@@ -66,7 +66,7 @@ public class BotConfig {
             }
 
             try {
-                Files.write(file.toPath(), Collections.singleton(gson.toJson(def)));
+                Files.write(file.toPath(), Collections.singleton(GSON.toJson(def)));
             } catch (IOException ex) {
                 ex.printStackTrace();
                 System.err.println("[Config] Unable to write to config file! Shutting down...");
@@ -94,10 +94,10 @@ public class BotConfig {
             return def; // not possible
         }
 
-        BotConfig config = gson.fromJson(reader, BotConfig.class);
+        BotConfig config = GSON.fromJson(reader, BotConfig.class);
 
         try {
-            Files.write(file.toPath(), Collections.singleton(gson.toJson(config))); // force new default values
+            Files.write(file.toPath(), Collections.singleton(GSON.toJson(config))); // force new default values
         } catch (IOException ex) {
             ex.printStackTrace();
             System.err.println("[Config] Unable to write to config file! Config is still loaded, resuming execution...");
