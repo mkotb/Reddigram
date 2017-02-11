@@ -35,7 +35,6 @@ import java.util.function.BiConsumer;
 // which allows us to do whatever we want when the user clicks it. In the future,
 // the API will have an open 'dummyButton' option for menus.
 public class TelegramListener implements Listener {
-    public static final int PAGES = 4;
     public static final String[] NUMBER_EMOJIS = new String[] {"1⃣", "2⃣", "3⃣", "4⃣", "5⃣", "6⃣", "7⃣", "8⃣", "9⃣"};
     private ReddigramBot bot;
 
@@ -110,13 +109,28 @@ public class TelegramListener implements Listener {
                     .plain(" on Reddit").newLine();
             String subredditLink = "https://reddit.com/r/" + submission.getSubredditName();
             String userLink = "https://reddit.com/u/" + submission.getAuthor();
+            String title = submission.getTitle();
+            String description = "By /u/" + submission.getAuthor() + " on /r/" + submission.getSubredditName();
             URL url = null;
 
             builder.plain("[by ").link("/u/" + submission.getAuthor(), userLink).plain(" on ")
                     .link("/r/" + submission.getSubredditName(), subredditLink);
 
+            if (title.length() > 43 || (submission.isNsfw() && title.length() > 36)) {
+                if (submission.isNsfw()) {
+                    title = title.substring(0, 33) + "...";
+                } else {
+                    title = title.substring(0, 40) + "...";
+                }
+            }
+
+            if (description.length() > 41) {
+                description = description.substring(0, 38) + "...";
+            }
+
             if (submission.isNsfw()) {
                 builder.bold(" (NSFW)");
+                title += " (NSFW)";
             }
 
             builder.plain("]");
@@ -129,24 +143,24 @@ public class TelegramListener implements Listener {
             }
 
             results.add(InlineQueryResultArticle.builder()
-                    .id(submission.getId())
-                    .title(submission.getTitle())
-                    .description("By /u/" + submission.getAuthor() + " on /r/" + submission.getSubredditName())
-                    .inputMessageContent(InputTextMessageContent.builder()
-                            .messageText(messageText)
-                            .parseMode(ParseMode.HTML)
-                            .disableWebPagePreview(false)
-                            .build())
+                            .id(submission.getId())
+                            .title(title)
+                            .description(description)
+                            .inputMessageContent(InputTextMessageContent.builder()
+                                    .messageText(messageText)
+                                    .parseMode(ParseMode.HTML)
+                                    .disableWebPagePreview(false)
+                                    .build())
                     .url(url)
                     .build()
             );
         }));
 
         event.getQuery().answer(bot.telegramBot(), InlineQueryResponse.builder()
-                .results(results)
-                .cacheTime(600) // stay in cache for 600s
-                .isPersonal(false) // although sorting is not personal sometimes, this will save processing time
-                .nextOffset("").build()
+                        .results(results)
+                        .cacheTime(600) // stay in cache for 600s
+                        .isPersonal(false) // although sorting is not personal sometimes, this will save processing time
+                        .nextOffset("").build()
         );
         bot.dataFile().statistics().incrementRequests();
     }
@@ -216,9 +230,9 @@ public class TelegramListener implements Listener {
         dummyMenuBuilder.forWhom(chat);
         dummyMenuBuilder.message(message);
 
-        List<InlineMenu> menus = new ArrayList<>(PAGES);
+        List<InlineMenu> menus = new ArrayList<>(paginated.size());
 
-        for (int page = 0; page < PAGES; page++) {
+        for (int page = 0; page < paginated.size(); page++) {
             /*
              * Create a menu with one row with one or two buttons
              * depending on if there is a page to go to forward or backward
@@ -229,7 +243,7 @@ public class TelegramListener implements Listener {
             if (page != 0) {
                 int backMenu = page - 1;
 
-                row.toggleButton("⬅️ Back (" + (page) + "/" + PAGES + ")")
+                row.toggleButton("⬅️ Back (" + (page) + "/" + paginated.size() + ")")
                         .toggleCallback((button, value) -> {
                             // move to next menu
                             button.getMenu().unregister();
@@ -251,7 +265,7 @@ public class TelegramListener implements Listener {
             if (page != 3) {
                 int nextMenu = page + 1;
 
-                row.toggleButton("➡️ Next (" + (page + 2) + "/" + PAGES + ")")
+                row.toggleButton("➡️ Next (" + (page + 2) + "/" + paginated.size() + ")")
                         .toggleCallback((button, value) -> {
                             // move to next menu
                             button.getMenu().unregister();

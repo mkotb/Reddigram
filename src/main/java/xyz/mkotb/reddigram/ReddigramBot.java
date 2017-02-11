@@ -1,6 +1,7 @@
 package xyz.mkotb.reddigram;
 
 import net.dean.jraw.RedditClient;
+import net.dean.jraw.http.NetworkException;
 import net.dean.jraw.http.UserAgent;
 import net.dean.jraw.models.Listing;
 import net.dean.jraw.models.Submission;
@@ -14,6 +15,7 @@ import java.io.File;
 import java.util.*;
 
 public class ReddigramBot {
+    public static final int PAGES = 4;
     private final Timer timer;
     private final BotConfig config;
     private final UUID deviceId = UUID.randomUUID();
@@ -57,15 +59,32 @@ public class ReddigramBot {
         }
 
         paginator.setLimit(20);
-        Listing<Submission> listing = paginator.next();
-        // list of pages with 5 entries
-        List<List<Submission>> paginated = new ArrayList<>(TelegramListener.PAGES);
+        Listing<Submission> listing;
 
-        for (int page = 0; page < TelegramListener.PAGES; page++) {
+        try {
+            listing = paginator.next();
+        } catch (NetworkException ex) {
+            if (ex.getResponse().getStatusCode() != 404) {
+                sendToOwner("Was unable to make a request to reddit due to a NetworkException: " + ex.getMessage());
+            }
+
+            return new ArrayList<>();
+        }
+
+        // list of pages with 5 entries
+        List<List<Submission>> paginated = new ArrayList<>();
+
+        for (int page = 0; page < PAGES; page++) {
             List<Submission> submissions = new ArrayList<>(5);
 
             for (int index = 0; index < 5; index++) {
-                submissions.add(listing.get((page * 5) + index));
+                int i = (page * 5) + index;
+
+                if (i >= listing.size()) {
+                    break;
+                }
+
+                submissions.add(listing.get(i));
             }
 
             paginated.add(submissions);

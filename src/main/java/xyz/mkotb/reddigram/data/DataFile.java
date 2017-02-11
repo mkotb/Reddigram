@@ -46,7 +46,7 @@ public class DataFile {
                 file.createNewFile();
             }
 
-            statistics.setUsersServed(userData.size());
+            statistics().setUsersServed(userData.size());
 
             Files.write(file.toPath(), Collections.singleton(BotConfig.GSON.toJson(this)));
         } catch (IOException ex) {
@@ -63,6 +63,10 @@ public class DataFile {
     }
 
     public Statistics statistics() {
+        if (statistics == null) {
+            statistics = new Statistics();
+        }
+
         return statistics;
     }
 }
