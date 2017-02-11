@@ -14,10 +14,8 @@ import pro.zackpollard.telegrambot.api.conversations.ConversationContext;
 import pro.zackpollard.telegrambot.api.conversations.prompt.TextPrompt;
 import pro.zackpollard.telegrambot.api.event.Listener;
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent;
-import pro.zackpollard.telegrambot.api.menu.InlineMenu;
-import pro.zackpollard.telegrambot.api.menu.InlineMenuBuilder;
-import pro.zackpollard.telegrambot.api.menu.InlineMenuRowBuilder;
-import pro.zackpollard.telegrambot.api.menu.SubInlineMenuBuilder;
+import pro.zackpollard.telegrambot.api.extensions.Extensions;
+import pro.zackpollard.telegrambot.api.menu.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -104,14 +102,19 @@ public class TelegramListener implements Listener {
 
         InlineMenu m = menu.buildMenu();
 
-        m.start();
-        m.apply();
+        if (msg != null) {
+            registerMenu(m);
+            bot.telegramBot().editMessageText(msg, "Please select a category", ParseMode.NONE, false, m.toKeyboard());
+        } else {
+            chat.sendMessage(
+                    SendableTextMessage.plain("Please select a category").replyMarkup(m.toKeyboard()).build()
+            );
+        }
     }
 
     public void sendSubreddit(Message message, Chat chat, String subreddit, Sorting sorting) {
         List<List<Submission>> paginated = bot.pagesFor(subreddit, sorting);
         // edit the message to contain the contents of the first page
-        bot.telegramBot().editMessageText(message, messageFor(paginated.get(0)), ParseMode.HTML, true, null);
 
         // create a dummy builder to encase all the pages
         InlineMenuBuilder dummyMenuBuilder = InlineMenu.builder(bot.telegramBot());
@@ -136,7 +139,7 @@ public class TelegramListener implements Listener {
                         .toggleCallback((button, value) -> {
                             // move to next menu
                             button.getMenu().unregister();
-                            menus.get(backMenu).start();
+                            registerMenu(menus.get(backMenu));
 
                             // edit text to match the page
                             bot.telegramBot().editMessageText(
@@ -158,9 +161,9 @@ public class TelegramListener implements Listener {
                         .toggleCallback((button, value) -> {
                             // move to next menu
                             button.getMenu().unregister();
-                            menus.get(nextMenu).start();
+                            registerMenu(menus.get(nextMenu));
 
-                            // edit text to match the page
+                            // edit text and menu to match the page
                             bot.telegramBot().editMessageText(
                                     message,
                                     messageFor(paginated.get(nextMenu)),
@@ -179,8 +182,14 @@ public class TelegramListener implements Listener {
         // start the menu encasing the menus and unregistering it
         dummyMenuBuilder.buildMenu().unregister();
         // start the first page's menu
-        menus.get(0).start();
-        //menus.get(0).apply();
+        registerMenu(menus.get(0));
+        bot.telegramBot().editMessageText(
+                message,
+                messageFor(paginated.get(0)),
+                ParseMode.HTML,
+                true,
+                menus.get(0).toKeyboard()
+        );
     }
 
     // generates message for the page of submissions
@@ -205,5 +214,11 @@ public class TelegramListener implements Listener {
 
         String message = builder.buildText().build().getMessage();
         return message.substring(0, message.length() - 2);
+    }
+
+    // register menu manually and bypass the start
+    // method which sends out an update when called
+    private void registerMenu(InlineMenu menu) {
+        Extensions.get(bot.telegramBot(), InlineMenuRegistry.class).register(menu);
     }
 }
