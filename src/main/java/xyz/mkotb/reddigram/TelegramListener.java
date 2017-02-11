@@ -102,7 +102,10 @@ public class TelegramListener implements Listener {
                     .buildRow();
         }
 
-        menu.buildMenu().start();
+        InlineMenu m = menu.buildMenu();
+
+        m.start();
+        m.apply();
     }
 
     public void sendSubreddit(Message message, Chat chat, String subreddit, Sorting sorting) {
@@ -177,6 +180,7 @@ public class TelegramListener implements Listener {
         dummyMenuBuilder.buildMenu().unregister();
         // start the first page's menu
         menus.get(0).start();
+        //menus.get(0).apply();
     }
 
     // generates message for the page of submissions
@@ -190,8 +194,13 @@ public class TelegramListener implements Listener {
 
             builder.plain(NUMBER_EMOJIS[i]).space().link(submission.getTitle(), submission.getShortURL()).space().newLine()
                     .plain("[by ").link("/u/" + submission.getAuthor(), userLink).plain(" on ")
-                    .link("/r/" + submission.getSubredditName(), subredditLink).plain("]")
-                    .newLine().newLine();
+                    .link("/r/" + submission.getSubredditName(), subredditLink);
+
+            if (submission.isNsfw()) {
+                builder.bold(" (NSFW)");
+            }
+
+            builder.plain("]").newLine().newLine();
         }
 
         String message = builder.buildText().build().getMessage();
