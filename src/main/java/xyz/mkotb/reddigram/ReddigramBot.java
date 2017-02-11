@@ -8,6 +8,10 @@ import net.dean.jraw.models.Submission;
 import net.dean.jraw.paginators.Sorting;
 import net.dean.jraw.paginators.SubredditPaginator;
 import pro.zackpollard.telegrambot.api.TelegramBot;
+import pro.zackpollard.telegrambot.api.chat.message.send.SendableTextMessage;
+import pro.zackpollard.telegrambot.api.extensions.Extensions;
+import pro.zackpollard.telegrambot.api.menu.InlineMenu;
+import pro.zackpollard.telegrambot.api.menu.InlineMenuRegistry;
 import xyz.mkotb.reddigram.data.BotConfig;
 import xyz.mkotb.reddigram.data.DataFile;
 
@@ -15,6 +19,7 @@ import java.io.File;
 import java.util.*;
 
 public class ReddigramBot {
+    public static final String[] NUMBER_EMOJIS = new String[] {"1⃣", "2⃣", "3⃣", "4⃣", "5⃣", "6⃣", "7⃣", "8⃣", "9⃣"};
     public static final int PAGES = 4;
     private final Timer timer;
     private final BotConfig config;
@@ -34,7 +39,8 @@ public class ReddigramBot {
         client = new RedditClient(UserAgent.of("server", "xyz.mkotb.reddigram", "1.0", config.redditUsername()));
         telegramBot = TelegramBot.login(config.botApiKey());
 
-        telegramBot.getEventsManager().register(new TelegramListener(this));
+        telegramBot.getEventsManager().register(new InlineListener(this));
+        telegramBot.getEventsManager().register(new CommandListener(this));
         telegramBot.startUpdates(false);
         log("Successfully logged in");
 
@@ -91,6 +97,36 @@ public class ReddigramBot {
         }
 
         return paginated;
+    }
+
+    // generates message for the page of submissions
+    public String messageFor(List<Submission> submissions) {
+        SendableTextMessage.SendableTextBuilder builder = SendableTextMessage.builder().textBuilder();
+
+        for (int i = 0; i < submissions.size(); i++) {
+            Submission submission = submissions.get(i);
+            String subredditLink = "https://reddit.com/r/" + submission.getSubredditName();
+            String userLink = "https://reddit.com/u/" + submission.getAuthor();
+
+            builder.plain(NUMBER_EMOJIS[i]).space().link(submission.getTitle(), submission.getShortURL()).space().newLine()
+                    .plain("[by ").link("/u/" + submission.getAuthor(), userLink).plain(" on ")
+                    .link("/r/" + submission.getSubredditName(), subredditLink);
+
+            if (submission.isNsfw()) {
+                builder.bold(" (NSFW)");
+            }
+
+            builder.plain("]").newLine().newLine();
+        }
+
+        String message = builder.buildText().build().getMessage();
+        return message.substring(0, message.length() - 2);
+    }
+
+    // register menu manually and bypass the start
+    // method which sends out an update when called
+    public void registerMenu(InlineMenu menu) {
+        Extensions.get(telegramBot(), InlineMenuRegistry.class).register(menu);
     }
 
     public void log(String text) {
