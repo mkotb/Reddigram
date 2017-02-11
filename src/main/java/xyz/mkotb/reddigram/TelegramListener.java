@@ -4,6 +4,10 @@ import com.sun.xml.internal.ws.util.StringUtils;
 import net.dean.jraw.models.Submission;
 import net.dean.jraw.paginators.Sorting;
 import pro.zackpollard.telegrambot.api.chat.Chat;
+import pro.zackpollard.telegrambot.api.chat.inline.send.InlineQueryResponse;
+import pro.zackpollard.telegrambot.api.chat.inline.send.content.InputTextMessageContent;
+import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResult;
+import pro.zackpollard.telegrambot.api.chat.inline.send.results.InlineQueryResultArticle;
 import pro.zackpollard.telegrambot.api.chat.message.Message;
 import pro.zackpollard.telegrambot.api.chat.message.content.TextContent;
 import pro.zackpollard.telegrambot.api.chat.message.send.ParseMode;
@@ -13,10 +17,13 @@ import pro.zackpollard.telegrambot.api.conversations.Conversation;
 import pro.zackpollard.telegrambot.api.conversations.ConversationContext;
 import pro.zackpollard.telegrambot.api.conversations.prompt.TextPrompt;
 import pro.zackpollard.telegrambot.api.event.Listener;
+import pro.zackpollard.telegrambot.api.event.chat.inline.InlineQueryReceivedEvent;
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent;
 import pro.zackpollard.telegrambot.api.extensions.Extensions;
 import pro.zackpollard.telegrambot.api.menu.*;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,11 +79,69 @@ public class TelegramListener implements Listener {
         }
     }
 
+    @Override
+    public void onInlineQueryReceived(InlineQueryReceivedEvent event) {
+        String subreddit = event.getQuery().getQuery();
+
+        if (subreddit.trim().isEmpty()) {
+            subreddit = "all";
+        }
+
+        Sorting sorting = Sorting.HOT; // TODO: look for their preference and if none, default to HOT
+        List<List<Submission>> pages = bot.pagesFor(subreddit, sorting);
+        List<InlineQueryResult> results = new ArrayList<>(pages.size());
+
+        pages.forEach((page) -> page.forEach((submission) -> {
+            SendableTextMessage.SendableTextBuilder builder = SendableTextMessage.builder().textBuilder()
+                    .link(submission.getTitle(), submission.getShortURL())
+                    .plain(" on Reddit").newLine();
+            String subredditLink = "https://reddit.com/r/" + submission.getSubredditName();
+            String userLink = "https://reddit.com/u/" + submission.getAuthor();
+            URL url = null;
+
+            builder.plain("[by ").link("/u/" + submission.getAuthor(), userLink).plain(" on ")
+                    .link("/r/" + submission.getSubredditName(), subredditLink);
+
+            if (submission.isNsfw()) {
+                builder.bold(" (NSFW)");
+            }
+
+            builder.plain("]");
+
+            String messageText = builder.buildText().build().getMessage();
+
+            try {
+                url = new URL(submission.getShortURL());
+            } catch (MalformedURLException ignored) {
+            }
+
+            results.add(InlineQueryResultArticle.builder()
+                    .id(submission.getId())
+                    .title(submission.getTitle())
+                    .description("By /u/" + submission.getAuthor() + " on /r/" + submission.getSubredditName())
+                    .inputMessageContent(InputTextMessageContent.builder()
+                            .messageText(messageText)
+                            .parseMode(ParseMode.HTML)
+                            .disableWebPagePreview(false)
+                            .build())
+                    .url(url)
+                    .build()
+            );
+        }));
+
+        event.getQuery().answer(bot.telegramBot(), InlineQueryResponse.builder()
+                .results(results)
+                .cacheTime(600) // stay in cache for 600s
+                .isPersonal(false) // although sorting is not personal sometimes, this will save processing time
+                .nextOffset("").build()
+        );
+    }
+
     /*
-     * Presents to the user a menu to select a category.
-     *
-     * TODO: Learn the preference and use that unless they want to change it.
-     */
+         * Presents to the user a menu to select a category.
+         *
+         * TODO: Learn the preference and use that unless they want to change it.
+         */
     public void sortingMenu(Message msg, Chat chat, String subreddit) {
         if (msg == null) {
             msg = chat.sendMessage("Please select a category:");
