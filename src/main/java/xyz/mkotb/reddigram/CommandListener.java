@@ -41,6 +41,18 @@ public class CommandListener implements Listener {
             bot.dataFile().newData(event.getChat().getId(), data);
         }
 
+        if (event.getCommand().equals("start")) {
+            event.getChat().sendMessage("This bot acts as a Reddit utility bot!" +
+                    "\n\n- You are able to view subreddits and the front page with /frontpage and /subreddit or using the inline feature @ReddigramBot" +
+                    "\n\n- Or follow live threads with /follow and you will be shown breaking live threads, which will give you the latest updates on news and major events!" +
+                    "\n\n- And more to be added, with features such as notifications and personalized front pages!" +
+                    "\n\nMade by @MazenK. Contact him for support.");
+        }
+
+        if (event.getCommand().equals("git")) {
+            event.getChat().sendMessage("This bot is open source! Check it out here:\nhttps://github.com/mkotb/Reddigram");
+        }
+
         if (event.getCommand().equals("stop")) {
             bot.dataFile().removeData(event.getChat().getId());
             event.getChat().sendMessage("Removed user data!");
