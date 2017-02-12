@@ -1,6 +1,5 @@
 package xyz.mkotb.reddigram;
 
-import com.sun.xml.internal.ws.util.StringUtils;
 import net.dean.jraw.paginators.Sorting;
 import pro.zackpollard.telegrambot.api.chat.Chat;
 import pro.zackpollard.telegrambot.api.chat.message.Message;
@@ -148,7 +147,7 @@ public class CommandListener implements Listener {
 
         for (Sorting sorting : Sorting.values()) {
             menu.newRow()
-                    .toggleButton(StringUtils.capitalize(sorting.name().toLowerCase()))
+                    .toggleButton(capitalize(sorting.name().toLowerCase()))
                        .toggleCallback((button, value) -> {
                            button.getMenu().unregister();
                            data.setPreferredSorting(sorting);
@@ -169,6 +168,16 @@ public class CommandListener implements Listener {
             chat.sendMessage(
                     SendableTextMessage.plain("Please select a category").replyMarkup(m.toKeyboard()).build()
             );
+        }
+    }
+
+    private static String capitalize(String name) {
+        if(name != null && name.length() != 0) {
+            char[] chars = name.toCharArray();
+            chars[0] = Character.toUpperCase(chars[0]);
+            return new String(chars);
+        } else {
+            return name;
         }
     }
 }
