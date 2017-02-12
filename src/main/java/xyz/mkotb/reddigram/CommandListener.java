@@ -1,7 +1,6 @@
 package xyz.mkotb.reddigram;
 
 import com.sun.xml.internal.ws.util.StringUtils;
-import net.dean.jraw.models.Submission;
 import net.dean.jraw.paginators.Sorting;
 import pro.zackpollard.telegrambot.api.chat.Chat;
 import pro.zackpollard.telegrambot.api.chat.message.Message;
@@ -15,7 +14,7 @@ import pro.zackpollard.telegrambot.api.conversations.prompt.TextPrompt;
 import pro.zackpollard.telegrambot.api.event.Listener;
 import pro.zackpollard.telegrambot.api.event.chat.message.CommandMessageReceivedEvent;
 import pro.zackpollard.telegrambot.api.menu.*;
-import xyz.mkotb.reddigram.cmd.LiveCommand;
+import xyz.mkotb.reddigram.cmd.LiveCommands;
 import xyz.mkotb.reddigram.cmd.SubredditCommand;
 import xyz.mkotb.reddigram.data.UserData;
 
@@ -74,7 +73,15 @@ public class CommandListener implements Listener {
         }
 
         if (event.getCommand().equals("live")) {
-            LiveCommand.followLive(bot, event.getChat());
+            LiveCommands.live(bot, event.getChat());
+        }
+
+        if (event.getCommand().equals("follow")) {
+            LiveCommands.follow(bot, event.getArgs(), event.getChat());
+        }
+
+        if (event.getCommand().equals("unfollow")) {
+            LiveCommands.unfollow(bot, event.getChat());
         }
     }
 

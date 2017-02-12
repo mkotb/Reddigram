@@ -43,7 +43,8 @@ public class LiveUpdate {
                 .bold("\uD83D\uDDE3 Update on ").bold(threadId).bold(" from ").link(authorText, "https://reddit.com" + authorText)
                 .newLine().newLine()
                 .plain(body)
-                .buildText().build();
+                .buildText()
+                .disableWebPagePreview(true).build();
     }
 
     @Override

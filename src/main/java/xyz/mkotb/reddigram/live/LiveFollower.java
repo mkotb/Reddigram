@@ -25,6 +25,7 @@ public class LiveFollower extends Thread {
     private final Set<String> subscribedChats = new ConcurrentSkipListSet<>();
     private final Set<LiveUpdate> sentUpdates = new HashSet<>(); // local to this thread
     private final AtomicLong lastUpdate = new AtomicLong(System.currentTimeMillis());
+    private boolean virgin = true;
 
     public LiveFollower(ReddigramBot bot, String id, String firstChat) {
         super("RedditLive Thread: " + id);
@@ -61,10 +62,13 @@ public class LiveFollower extends Thread {
                 });
 
                 updates.removeIf(sentUpdates::contains);
-                updates.removeIf((update) -> (System.currentTimeMillis() - update.created()) >= 60000L);
+                //updates.removeIf((update) -> (System.currentTimeMillis() - update.created()) >= 60000L);
                 updates.sort((e1, e2) -> (int) (e1.created() - e2.created()));
 
-                if (!updates.isEmpty()) {
+                if (virgin) {
+                    sentUpdates.addAll(updates);
+                    virgin = false;
+                } else if (!updates.isEmpty()) {
                     updates.forEach((update) -> {
                         sendUpdate(update);
                         sentUpdates.add(update);
@@ -83,13 +87,17 @@ public class LiveFollower extends Thread {
         }
 
         try {
-            Thread.sleep(3000L);
+            Thread.sleep(1500L);
         } catch (InterruptedException ex) {
             bot.sendToOwner("Live Thread follower for " + id + " was interrupted");
             return;
         }
 
         run();
+    }
+
+    public String threadId() {
+        return id;
     }
 
     public void subscribe(String chat) {

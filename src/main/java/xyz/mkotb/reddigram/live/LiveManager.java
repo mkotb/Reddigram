@@ -9,6 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class LiveManager {
+    public static final Pattern THREAD_ID_PATTERN = Pattern.compile("\\w{12}");
     public static final Pattern LINK_PATTERN = Pattern.compile("reddit.com\\/live\\/(.{12})");
     private final ReddigramBot bot;
     private final Map<String, LiveFollower> followingThreads = new ConcurrentHashMap<>();
@@ -20,6 +21,12 @@ public class LiveManager {
     }
 
     public void subscribeTo(String thread, String chat) {
+        LiveFollower previousThread = threadBy(chat);
+
+        if (previousThread != null) {
+            previousThread.unsubscribe(chat);
+        }
+
         if (!followingThreads.containsKey(thread)) {
             LiveFollower follower = new LiveFollower(bot, thread, chat);
 
@@ -41,29 +48,49 @@ public class LiveManager {
         return followingThreads.values().stream().anyMatch((follower) -> follower.isSubscribed(chat));
     }
 
+    public LiveFollower threadBy(String chat) {
+        return followingThreads.values().stream()
+                .filter((follower) -> follower.isSubscribed(chat))
+                .findFirst().orElse(null);
+    }
+
     void removeThread(String thread) {
         followingThreads.remove(thread);
     }
 
     public String idFromSubmission(Submission submission) {
-        String link = "";
+        String id;
 
         if (submission.getUrl() != null && !submission.getUrl().isEmpty()) {
-            link = submission.getUrl();
-        }
+            id = idFromInput(submission.getUrl());
 
-        Matcher matcher = LINK_PATTERN.matcher(link);
-
-        if (!matcher.find()) {
-            if (submission.getSelftext() != null && !submission.getSelftext().isEmpty()) {
-                link = submission.getSelftext();
-                matcher = LINK_PATTERN.matcher(link);
-                matcher.find();
+            if (id == null && submission.getSelftext() != null && !submission.getSelftext().isEmpty()) {
+                return idFromInput(submission.getSelftext());
+            } else if (id != null) {
+                return id;
             } else {
                 return null;
             }
         }
 
-        return matcher.group(1);
+        return null;
+    }
+
+    public String idFromInput(String input) {
+        if (THREAD_ID_PATTERN.matcher(input).matches()) {
+            return input;
+        }
+
+        Matcher matcher = LINK_PATTERN.matcher(input);
+
+        if (!matcher.find()) {
+            return null;
+        }
+
+        try {
+            return matcher.group(1);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 }
