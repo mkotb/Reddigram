@@ -35,61 +35,61 @@ public class LiveFollower extends Thread {
 
     @Override
     public void run() {
-        if (subscribedChats.isEmpty()) {
-            bot.liveManager().removeThread(id);
-            return;
-        }
+        while (!isInterrupted()) {
+            if (subscribedChats.isEmpty()) {
+                bot.liveManager().removeThread(id);
+                return;
+            }
 
-        try {
-            JSONObject obj = Unirest.get("https://reddit.com/live/" + id + ".json")
-                    .header("User-Agent", bot.client().getUserAgent())
-                    .asJson().getBody().getObject();
+            try {
+                JSONObject obj = Unirest.get("https://reddit.com/live/" + id + ".json")
+                        .header("User-Agent", bot.client().getUserAgent())
+                        .asJson().getBody().getObject();
 
-            if (!obj.getString("kind").equals("Listing")) {
-                bot.sendToOwner("Live Thread update for " + id + " was not a listing: " + obj.toString());
-            } else {
-                JSONArray jsonUpdates = obj.getJSONObject("data").getJSONArray("children");
-                List<LiveUpdate> updates = new ArrayList<>(jsonUpdates.length());
+                if (!obj.getString("kind").equals("Listing")) {
+                    bot.sendToOwner("Live Thread update for " + id + " was not a listing: " + obj.toString());
+                } else {
+                    JSONArray jsonUpdates = obj.getJSONObject("data").getJSONArray("children");
+                    List<LiveUpdate> updates = new ArrayList<>(jsonUpdates.length());
 
-                jsonUpdates.forEach((o) -> {
-                    JSONObject jsonUpdate = (JSONObject) o;
+                    jsonUpdates.forEach((o) -> {
+                        JSONObject jsonUpdate = (JSONObject) o;
 
-                    if (jsonUpdate.has("kind") && jsonUpdate.getString("kind").equals("LiveUpdate")) {
-                        updates.add(new LiveUpdate(id, jsonUpdate.getJSONObject("data")));
-                    }
-                });
-
-                updates.removeIf(sentUpdates::contains);
-                updates.sort((e1, e2) -> (int) (e1.created() - e2.created()));
-
-                if (virgin) {
-                    sentUpdates.addAll(updates);
-                    virgin = false;
-                } else if (!updates.isEmpty()) {
-                    updates.forEach((update) -> {
-                        sendUpdate(update);
-                        sentUpdates.add(update);
+                        if (jsonUpdate.has("kind") && jsonUpdate.getString("kind").equals("LiveUpdate")) {
+                            updates.add(new LiveUpdate(id, jsonUpdate.getJSONObject("data")));
+                        }
                     });
 
-                    lastUpdate.set(System.currentTimeMillis());
-                } else if ((System.currentTimeMillis() - lastUpdate.get()) >= KILL_TIME) {
-                    farewell();
-                    bot.liveManager().removeThread(id);
-                    return;
+                    updates.removeIf(sentUpdates::contains);
+                    updates.sort((e1, e2) -> (int) (e1.created() - e2.created()));
+
+                    if (virgin) {
+                        sentUpdates.addAll(updates);
+                        virgin = false;
+                    } else if (!updates.isEmpty()) {
+                        updates.forEach((update) -> {
+                            sendUpdate(update);
+                            sentUpdates.add(update);
+                        });
+
+                        lastUpdate.set(System.currentTimeMillis());
+                    } else if ((System.currentTimeMillis() - lastUpdate.get()) >= KILL_TIME) {
+                        farewell();
+                        bot.liveManager().removeThread(id);
+                        return;
+                    }
                 }
+            } catch (UnirestException ex) {
+                bot.sendToOwner("Could not get an update for live thread " + id + " due to UnirestException: " + ex.getMessage());
             }
-        } catch (UnirestException ex) {
-            bot.sendToOwner("Could not get an update for live thread " + id + " due to UnirestException: " + ex.getMessage());
-        }
 
-        try {
-            Thread.sleep(1500L);
-        } catch (InterruptedException ex) {
-            bot.sendToOwner("Live Thread follower for " + id + " was interrupted");
-            return;
+            try {
+                Thread.sleep(1500L);
+            } catch (InterruptedException ex) {
+                bot.sendToOwner("Live Thread follower for " + id + " was interrupted");
+                return;
+            }
         }
-
-        run();
     }
 
     public String threadId() {
