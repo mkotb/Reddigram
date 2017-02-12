@@ -37,14 +37,11 @@ public class LiveUpdate {
     }
 
     public SendableTextMessage toMessage() {
-        String authorText = "/u/" + author;
-
         return SendableTextMessage.builder().textBuilder()
-                .bold("\uD83D\uDDE3 Update on ").bold(threadId).bold(" from ").link(authorText, "https://reddit.com" + authorText)
+                .bold("\uD83D\uDDE3 Update on ").bold(threadId).bold(" from ").bold(author)
                 .newLine().newLine()
                 .plain(body)
-                .buildText()
-                .disableWebPagePreview(true).build();
+                .buildText().build();
     }
 
     @Override

@@ -67,12 +67,20 @@ public class DataFile {
         userData.put(chat, data);
     }
 
+    public void removeData(String chat) {
+        userData.remove(chat);
+    }
+
     public Statistics statistics() {
         if (statistics == null) {
             statistics = new Statistics();
         }
 
         return statistics;
+    }
+
+    public Set<Map.Entry<String, UserData>> userData() {
+        return userData.entrySet();
     }
 
     public List<SavedLiveThread> savedThreads() {

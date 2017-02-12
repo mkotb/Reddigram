@@ -60,7 +60,6 @@ public class LiveFollower extends Thread {
                 });
 
                 updates.removeIf(sentUpdates::contains);
-                //updates.removeIf((update) -> (System.currentTimeMillis() - update.created()) >= 60000L);
                 updates.sort((e1, e2) -> (int) (e1.created() - e2.created()));
 
                 if (virgin) {
@@ -74,7 +73,6 @@ public class LiveFollower extends Thread {
 
                     lastUpdate.set(System.currentTimeMillis());
                 } else if ((System.currentTimeMillis() - lastUpdate.get()) >= KILL_TIME) {
-                    // todo tell subscribers bye bye and unregister thread
                     farewell();
                     bot.liveManager().removeThread(id);
                     return;

@@ -34,6 +34,18 @@ public class CommandListener implements Listener {
 
     @Override
     public void onCommandMessageReceived(CommandMessageReceivedEvent event) {
+        UserData data = bot.dataFile().dataFor(event.getChat().getId());
+
+        if (data == null) {
+            data = new UserData();
+            bot.dataFile().newData(event.getChat().getId(), data);
+        }
+
+        if (event.getCommand().equals("stop")) {
+            bot.dataFile().removeData(event.getChat().getId());
+            event.getChat().sendMessage("Removed user data!");
+        }
+
         if (event.getCommand().equals("frontpage")) {
             sortingMenu(null, event.getChat(), false, (message, sorting) ->
                     SubredditCommand.sendSubreddit(bot, message, event.getChat(), "all", sorting));
@@ -83,6 +95,18 @@ public class CommandListener implements Listener {
         if (event.getCommand().equals("unfollow")) {
             LiveCommands.unfollow(bot, event.getChat());
         }
+
+        if (event.getCommand().equals("subscribe")) {
+            data.setSubscribedToBreaking(true);
+            bot.dataFile().save();
+            event.getChat().sendMessage("Successfully subscribed to breaking live threads!");
+        }
+
+        if (event.getCommand().equals("unsubscribe")) {
+            data.setSubscribedToBreaking(false);
+            bot.dataFile().save();
+            event.getChat().sendMessage("Successfully unsubscribed from breaking live threads!");
+        }
     }
 
     /*
@@ -103,12 +127,8 @@ public class CommandListener implements Listener {
                 consumer.accept(msg, data.preferredSorting());
                 return;
             }
-        } else if (data == null) {
-            data = new UserData();
-            bot.dataFile().newData(chat.getId(), data);
         }
 
-        UserData userData = data; // effectively final
         Message message = msg;
         InlineMenuBuilder menu = InlineMenu.builder(bot.telegramBot())
                 .forWhom(chat)
@@ -119,7 +139,7 @@ public class CommandListener implements Listener {
                     .toggleButton(StringUtils.capitalize(sorting.name().toLowerCase()))
                        .toggleCallback((button, value) -> {
                            button.getMenu().unregister();
-                           userData.setPreferredSorting(sorting);
+                           data.setPreferredSorting(sorting);
 
                            consumer.accept(message, sorting);
                            bot.dataFile().save();

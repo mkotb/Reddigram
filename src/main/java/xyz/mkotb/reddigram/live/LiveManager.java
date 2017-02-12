@@ -20,6 +20,8 @@ public class LiveManager {
 
         bot.dataFile().savedThreads().forEach((saved) ->
             followingThreads.put(saved.id(), saved.toActiveFollower(bot)));
+
+        bot.timer().scheduleAtFixedRate(new ScanLiveThreadsTask(bot), 500L, 300000L);
     }
 
     public Collection<LiveFollower> followers() {

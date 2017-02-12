@@ -142,6 +142,10 @@ public class ReddigramBot {
         }
     }
 
+    public Timer timer() {
+        return timer;
+    }
+
     public DataFile dataFile() {
         return dataFile;
     }
