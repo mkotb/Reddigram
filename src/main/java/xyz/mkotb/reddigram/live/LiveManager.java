@@ -46,19 +46,24 @@ public class LiveManager {
     }
 
     public String idFromSubmission(Submission submission) {
-        String link;
+        String link = "";
 
         if (submission.getUrl() != null && !submission.getUrl().isEmpty()) {
             link = submission.getUrl();
-        } else if (submission.getSelftext() != null && !submission.getSelftext().isEmpty()) {
-            link = submission.getSelftext();
-        } else {
-            return null;
         }
 
         Matcher matcher = LINK_PATTERN.matcher(link);
 
-        matcher.find();
+        if (!matcher.find()) {
+            if (submission.getSelftext() != null && !submission.getSelftext().isEmpty()) {
+                link = submission.getSelftext();
+                matcher = LINK_PATTERN.matcher(link);
+                matcher.find();
+            } else {
+                return null;
+            }
+        }
+
         return matcher.group(1);
     }
 }
