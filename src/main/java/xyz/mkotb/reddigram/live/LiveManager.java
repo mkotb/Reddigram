@@ -3,6 +3,7 @@ package xyz.mkotb.reddigram.live;
 import net.dean.jraw.models.Submission;
 import xyz.mkotb.reddigram.ReddigramBot;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -17,7 +18,12 @@ public class LiveManager {
     public LiveManager(ReddigramBot bot) {
         this.bot = bot;
 
-        // TODO load saved threads
+        bot.dataFile().savedThreads().forEach((saved) ->
+            followingThreads.put(saved.id(), saved.toActiveFollower(bot)));
+    }
+
+    public Collection<LiveFollower> followers() {
+        return followingThreads.values();
     }
 
     public void subscribeTo(String thread, String chat) {
@@ -28,19 +34,23 @@ public class LiveManager {
         }
 
         if (!followingThreads.containsKey(thread)) {
-            LiveFollower follower = new LiveFollower(bot, thread, chat);
+            LiveFollower follower = new LiveFollower(bot, thread);
 
+            follower.subscribe(chat);
             follower.start();
             followingThreads.put(thread, follower);
+            bot.dataFile().save();
             return;
         }
 
         followingThreads.get(thread).subscribe(chat);
+        bot.dataFile().save();
     }
 
     public void unsubscribe(String thread, String chat) {
         if (followingThreads.containsKey(thread)) {
             followingThreads.get(thread).unsubscribe(chat);
+            bot.dataFile().save();
         }
     }
 
@@ -56,6 +66,7 @@ public class LiveManager {
 
     void removeThread(String thread) {
         followingThreads.remove(thread);
+        bot.dataFile().save();
     }
 
     public String idFromSubmission(Submission submission) {

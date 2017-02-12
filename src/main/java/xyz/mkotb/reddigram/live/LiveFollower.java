@@ -27,12 +27,10 @@ public class LiveFollower extends Thread {
     private final AtomicLong lastUpdate = new AtomicLong(System.currentTimeMillis());
     private boolean virgin = true;
 
-    public LiveFollower(ReddigramBot bot, String id, String firstChat) {
+    public LiveFollower(ReddigramBot bot, String id) {
         super("RedditLive Thread: " + id);
         this.bot = bot;
         this.id = id;
-
-        subscribedChats.add(firstChat);
     }
 
     @Override
@@ -98,6 +96,10 @@ public class LiveFollower extends Thread {
 
     public String threadId() {
         return id;
+    }
+
+    public Set<String> subscribedChats() {
+        return subscribedChats;
     }
 
     public void subscribe(String chat) {

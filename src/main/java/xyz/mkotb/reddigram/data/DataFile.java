@@ -7,14 +7,13 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class DataFile {
-    private transient final ReddigramBot bot;
+    private transient ReddigramBot bot;
     private Map<String, UserData> userData = new HashMap<>();
     private Statistics statistics = new Statistics();
+    private List<SavedLiveThread> savedThreads = new ArrayList<>();
 
     public static DataFile load(ReddigramBot bot) {
         File file = new File("data.json");
@@ -31,7 +30,10 @@ public class DataFile {
             return null;
         }
 
-        return BotConfig.GSON.fromJson(reader, DataFile.class);
+        DataFile df = BotConfig.GSON.fromJson(reader, DataFile.class);
+
+        df.bot = bot;
+        return df;
     }
 
     private DataFile(ReddigramBot bot) {
@@ -47,6 +49,9 @@ public class DataFile {
             }
 
             statistics().setUsersServed(userData.size());
+
+            savedThreads.clear();
+            bot.liveManager().followers().forEach((thread) -> savedThreads.add(new SavedLiveThread(thread.threadId(), thread.subscribedChats())));
 
             Files.write(file.toPath(), Collections.singleton(BotConfig.GSON.toJson(this)));
         } catch (IOException ex) {
@@ -68,5 +73,13 @@ public class DataFile {
         }
 
         return statistics;
+    }
+
+    public List<SavedLiveThread> savedThreads() {
+        if (savedThreads == null) {
+            savedThreads = new ArrayList<>();
+        }
+
+        return savedThreads;
     }
 }
