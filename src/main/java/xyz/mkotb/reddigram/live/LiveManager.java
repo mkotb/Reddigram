@@ -5,10 +5,11 @@ import xyz.mkotb.reddigram.ReddigramBot;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class LiveManager {
-    public static final Pattern LINK_PATTERN = Pattern.compile("reddit\\.com/live/(.{12})");
+    public static final Pattern LINK_PATTERN = Pattern.compile("reddit.com\\/live\\/(.{12})");
     private final ReddigramBot bot;
     private final Map<String, LiveFollower> followingThreads = new ConcurrentHashMap<>();
 
@@ -47,14 +48,17 @@ public class LiveManager {
     public String idFromSubmission(Submission submission) {
         String link;
 
-        if (submission.getPermalink() != null && !submission.getPermalink().isEmpty()) {
-            link = submission.getPermalink();
+        if (submission.getUrl() != null && !submission.getUrl().isEmpty()) {
+            link = submission.getUrl();
         } else if (submission.getSelftext() != null && !submission.getSelftext().isEmpty()) {
             link = submission.getSelftext();
         } else {
             return null;
         }
 
-        return LINK_PATTERN.matcher(link).group();
+        Matcher matcher = LINK_PATTERN.matcher(link);
+
+        matcher.find();
+        return matcher.group(1);
     }
 }

@@ -61,6 +61,7 @@ public class LiveFollower extends Thread {
                 });
 
                 updates.removeIf(sentUpdates::contains);
+                updates.removeIf((update) -> (System.currentTimeMillis() - update.created()) >= 60000L);
                 updates.sort((e1, e2) -> (int) (e1.created() - e2.created()));
 
                 if (!updates.isEmpty()) {
