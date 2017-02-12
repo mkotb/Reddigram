@@ -14,6 +14,7 @@ import pro.zackpollard.telegrambot.api.menu.InlineMenu;
 import pro.zackpollard.telegrambot.api.menu.InlineMenuRegistry;
 import xyz.mkotb.reddigram.data.BotConfig;
 import xyz.mkotb.reddigram.data.DataFile;
+import xyz.mkotb.reddigram.live.LiveManager;
 
 import java.io.File;
 import java.util.*;
@@ -25,6 +26,7 @@ public class ReddigramBot {
     private final BotConfig config;
     private final UUID deviceId = UUID.randomUUID();
     private final TelegramBot telegramBot;
+    private final LiveManager liveManager;
     private final DataFile dataFile;
     private RedditClient client;
 
@@ -38,10 +40,11 @@ public class ReddigramBot {
         dataFile = DataFile.load(this);
         client = new RedditClient(UserAgent.of("server", "xyz.mkotb.reddigram", "1.0", config.redditUsername()));
         telegramBot = TelegramBot.login(config.botApiKey());
+        liveManager = new LiveManager(this);
 
         telegramBot.getEventsManager().register(new InlineListener(this));
         telegramBot.getEventsManager().register(new CommandListener(this));
-        telegramBot.startUpdates(false);
+        telegramBot.startUpdates(true);
         log("Successfully logged in");
 
         timer.scheduleAtFixedRate(new OAuthTask(this), 0L, 3500000L); // every 58 minutes reauth.
@@ -157,5 +160,9 @@ public class ReddigramBot {
 
     public TelegramBot telegramBot() {
         return telegramBot;
+    }
+
+    public LiveManager liveManager() {
+        return liveManager;
     }
 }

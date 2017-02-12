@@ -6,6 +6,5 @@ import xyz.mkotb.reddigram.ReddigramBot;
 
 public class LiveCommand {
     public static void subscribeToLive(ReddigramBot bot, Message message, Chat chat) {
-
     }
 }
