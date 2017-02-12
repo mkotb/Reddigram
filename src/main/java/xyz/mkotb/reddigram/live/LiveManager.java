@@ -1,11 +1,14 @@
 package xyz.mkotb.reddigram.live;
 
+import net.dean.jraw.models.Submission;
 import xyz.mkotb.reddigram.ReddigramBot;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 public class LiveManager {
+    public static final Pattern LINK_PATTERN = Pattern.compile("reddit\\.com/live/(.{12})");
     private final ReddigramBot bot;
     private final Map<String, LiveFollower> followingThreads = new ConcurrentHashMap<>();
 
@@ -39,5 +42,19 @@ public class LiveManager {
 
     void removeThread(String thread) {
         followingThreads.remove(thread);
+    }
+
+    public String idFromSubmission(Submission submission) {
+        String link;
+
+        if (submission.getPermalink() != null && !submission.getPermalink().isEmpty()) {
+            link = submission.getPermalink();
+        } else if (submission.getSelftext() != null && !submission.getSelftext().isEmpty()) {
+            link = submission.getSelftext();
+        } else {
+            return null;
+        }
+
+        return LINK_PATTERN.matcher(link).group();
     }
 }
